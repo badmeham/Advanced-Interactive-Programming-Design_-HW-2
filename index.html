@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle System</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0; /* Remove default margin */
+  overflow: hidden; /* Prevent scrolling */
+}
+
+/* Style for the sliding menu */
+.menu {
+  position: fixed;
+  top: 0;
+  left: -250px;
+  width: 250px;
+  height: 100%;
+  background-color: #111;
+  transition: left 0.3s ease;
+  overflow-x: hidden;
+  padding-top: 100px;
+}
+
+.menu a {
+  display: block;
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 25px;
+  color: #818181;
+  transition: 0.3s;
+}
+
+.menu a:hover {
+  color: #f1f1f1;
+}
+
+#openMenu {
+  font-size: 30px;
+  cursor: pointer;
+  position: fixed;
+  top: 22px;
+  left: 15px;
+  z-index: 1000;
+  color: #818181;
+  background-color: #111;
+  border-radius: 5px;
+  padding: 10px;
+  width: 35px;
+  height: 35px;
+  text-align: center;
+  position: absolute; /* Добавлено позиционирование */
+}
+
+.closebtn {
+  position: absolute;
+  top: 30px;
+  right: 25px;
+  font-size: 60px;
+  margin-left: 50px;
+  color: #818181;
+  transition: 0.3s;
+}
+
+.closebtn:hover {
+  color: #818181;
+}
+</style>
+</head>
+<body>
+  <!-- Sliding menu -->
+  <div class="menu" id="sideMenu">
+    <a href="javascript:void(0)" onclick="showText()">Show Text</a>
+    <a href="#" onclick="refresh()">Refresh</a>
+    <a href="javascript:void(0)" onclick="playMusic()">Play Music</a>
+    <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">X</a>
+  </div>
+
+  <audio id="backgroundMusic" loop>
+    <source src="Petit Biscuit - Sunset Lover.mp3" type="audio/mpeg">   
+  </audio>
+
+  <!-- Hamburger toggle button to open the menu -->
+  <div id="openMenu" onclick="openMenu()">☰</div>
+
+  <!-- p5.js canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <script>
+    let particles = [];
+    let flowField;
+    let cols, rows;
+    let inc = 0.1;
+    let scl = 20;
+    let zoff = 0;
+    let fr;
+    let isPlaying = false;
+
+    let opacity = 0; // Начальная прозрачность текста
+    let showTextFlag = false; // Флаг для отображения текста
+    let isRedYellow = false; // Флаг для определения текущего цвета
+
+    function playMusic() {
+      var audio = document.getElementById("backgroundMusic");
+      if (audio.paused) {
+        audio.play();
+        isPlaying = true;
+      } else {
+        audio.pause();
+        isPlaying = false;
+      }
+    }
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      cols = floor(width / scl);
+      rows = floor(height / scl);
+      flowField = new Array(cols * rows);
+
+      for (let i = 0; i < 1000; i++) {
+        particles[i] = new Particle();
+      }
+      background(0);
+    }
+
+    class Particle {
+      constructor() {
+        this.pos = createVector(random(width), random(height));
+        this.vel = createVector(0, 0);
+        this.acc = createVector(0, 0);
+        this.maxSpeed = 1.2;
+        this.prevPos = this.pos.copy();
+        this.color = color(random(0, 100), random(100, 200), random(200, 255), random(20, 100));
+      }
+
+      show() {
+        stroke(this.color);
+        strokeWeight(0.5);
+        line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+        this.updatePrev();
+      }
+
+      update() {
+        this.vel.add(this.acc);
+        this.vel.limit(this.maxSpeed);
+        this.pos.add(this.vel);
+        this.acc.mult(0);
+      }
+
+      follow(vectors) {
+        let x = floor(this.pos.x / scl);
+        let y = floor(this.pos.y / scl);
+        let index = x + y * cols;
+        let force = vectors[index];
+        this.applyForce(force);
+      }
+
+      applyForce(force) {
+        this.acc.add(force);
+      }
+
+      updatePrev() {
+        this.prevPos.x = this.pos.x;
+        this.prevPos.y = this.pos.y;
+      }
+
+      edges() {
+        if (this.pos.x > width) {
+          this.pos.x = 0;
+          this.updatePrev();
+        }
+        if (this.pos.x < 0) {
+          this.pos.x = width;
+          this.updatePrev();
+        }
+        if (this.pos.y > height) {
+          this.pos.y = 0;
+          this.updatePrev();
+        }
+        if (this.pos.y < 0) {
+          this.pos.y = height;
+          this.updatePrev();
+        }
+      }
+    }
+
+    // Event listener for opening the menu
+    function openMenu() {
+      document.getElementById('sideMenu').style.left = '0';
+    }
+
+    // Event listener for closing the menu
+    function closeMenu() {
+      document.getElementById('sideMenu').style.left = '-250px';
+    }
+
+    // Event listener for "Refresh" menu item
+    function refresh() {
+      setup();
+    }
+
+    // Function to change particle color
+    function changeColor() {
+      if (isRedYellow) {
+        // Change to blue shades
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].color = color(random(0, 100), random(100, 200), random(200, 255), random(20, 100));
+        }
+        isRedYellow = false; // Set the flag
+      } else {
+        // Change to red and yellow shades
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].color = color(random(255, 255), random(100, 200), random(0, 100), random(20, 100));
+        }
+        isRedYellow = true; // Set the flag
+      }
+    }
+
+    // Function to update particles and flow field after color change
+    function refresh() {
+      setup(); // Recreate particles and flow field
+      changeColor(); // Change color
+    }
+
+    function draw() {
+      // Draw the flow field and particles
+      let yoff = 0;
+      for (let y = 0; y < rows; y++) {
+        let xoff = 0;
+        for (let x = 0; x < cols; x++) {
+          let index = x + y * cols;
+          let angle = noise(xoff, yoff, zoff) * TWO_PI * 2;
+          let v = p5.Vector.fromAngle(angle);
+          v.setMag(0.08); // Reduce vector magnitude to slow down particles
+          flowField[index] = v;
+          xoff += inc;
+        }
+        yoff += inc;
+        zoff += 0.0003;
+      }
+
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].follow(flowField);
+        particles[i].update();
+        particles[i].edges();
+        particles[i].show();
+      }
+
+      // Text
+      if (showTextFlag) {
+        fadeOutText(); // Call function to display and fade out text
+      }
+    }
+
+    // Function to display text with fade-out effect
+    function fadeOutText() {
+      fill(255, opacity); // Change text color to white
+      textSize(32); // Text size
+      textFont("Georgia"); // Replace the font with the desired one
+      textAlign(CENTER, CENTER); // Center-align the text
+      text('Perlin Noise', width / 2, height / 2); // Draw the text
+
+      // Increase opacity until maximum value is reached
+      if (opacity < 255) {
+        opacity += 2; // Slightly reduce opacity increase rate
+      }
+    }
+
+    // Function to display text after a delay
+    function showTextWithDelay() {
+      showTextFlag = true; // Set flag to display text
+
+      // Delay before fading out text
+      setTimeout(() => {
+        showTextFlag = false; // Reset flag to hide text
+        opacity = 0; // Reset opacity to initial value
+      }, 2000); // Delay duration in milliseconds (2 seconds)
+    }
+
+    // Event listener for "Show Text" menu item
+    function showText() {
+      showTextWithDelay(); // Call function to display text after delay
+    }
+
+    // Resize canvas when window size changes
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+      setup(); // Recreate particles and flow field
+    }
+  </script>
+</body>
+</html>
